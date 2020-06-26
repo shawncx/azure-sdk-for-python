@@ -1,5 +1,10 @@
 # Release History
 
+## 1.3.2 (2020-06-26)
+
+- Restricted MSAL requirement to 1.3.x
+([#12215](https://github.com/Azure/azure-sdk-for-python/issues/12215))
+
 ## 1.3.1 (2020-03-31)
 
 - `ManagedIdentityCredential` raises `CredentialUnavailableError` when no
