@@ -18,7 +18,7 @@
 
 import unittest
 
-import azure.mgmt.appplatform
+import azure.mgmt.appplatform.v2020_07_01
 from devtools_testutils import AzureMgmtTestCase, ResourceGroupPreparer
 
 AZURE_LOCATION = 'eastus'
@@ -38,8 +38,8 @@ class MgmtAppPlatformTest(AzureMgmtTestCase):
         TENANT_ID = self.settings.TENANT_ID
         RESOURCE_GROUP = resource_group.name
         SERVICE_NAME = "myservice"
-        LOCATION = "myLocation"
         APP_NAME = "myapp"
+        DEPLOYMENT_NAME="default"
         BINDING_NAME = "mybinding"
         DATABASE_ACCOUNT_NAME = "myDatabaseAccount"
         CERTIFICATE_NAME = "myCertificate"
@@ -49,21 +49,6 @@ class MgmtAppPlatformTest(AzureMgmtTestCase):
         # /Services/put/Services_CreateOrUpdate[put]
         BODY = {
           "properties": {
-            "config_server_properties": {
-              "config_server": {
-                "git_property": {
-                  "uri": "https://github.com/fake-user/fake-repository.git",
-                  "label": "master",
-                  "search_paths": [
-                    "/"
-                  ]
-                }
-              }
-            },
-            "trace": {
-              "enabled": True,
-              "app_insight_instrumentation_key": "00000000-0000-0000-0000-000000000000"
-            }
           },
           "tags": {
             "key1": "value1"
@@ -73,22 +58,43 @@ class MgmtAppPlatformTest(AzureMgmtTestCase):
         result = self.mgmt_client.services.create_or_update(resource_group_name=RESOURCE_GROUP, service_name=SERVICE_NAME, resource=BODY)
         result = result.result()
 
-        # /Apps/put/Apps_CreateOrUpdate[put]
+        # /ConfigServers/put/ConfigServers_UpdatePut[put]
         PROPERTIES = {
-          "public": True,
-          "active_deployment_name": "mydeployment1",
-          "fqdn": "myapp.mydomain.com",
-          "https_only": False,
-          "temporary_disk": {
-            "size_in_gb": "2",
-            "mount_path": "/mytemporarydisk"
-          },
-          "persistent_disk": {
-            "size_in_gb": "2",
-            "mount_path": "/mypersistentdisk"
+          "config_server": {
+            "git_property": {
+              "uri": "https://github.com/Azure-Samples/piggymetrics-config.git",
+              "label": "master"
+            }
           }
         }
-        result = self.mgmt_client.apps.create_or_update(resource_group_name=RESOURCE_GROUP, service_name=SERVICE_NAME, app_name=APP_NAME, properties= PROPERTIES, location="eastus")
+
+        result = self.mgmt_client.config_servers.update_put(resource_group_name=RESOURCE_GROUP, service_name=SERVICE_NAME, properties=PROPERTIES)
+        result = result.result()
+
+        # /Apps/put/Apps_CreateOrUpdate[put]
+        PROPERTIES = {
+        }
+        result = self.mgmt_client.apps.create_or_update(resource_group_name=RESOURCE_GROUP, service_name=SERVICE_NAME, app_name=APP_NAME, properties=PROPERTIES)
+        result = result.result()
+
+        # /Deployments/put/Deployments_CreateOrUpdate[put]
+        PROPERTIES = {
+          "source": {
+            "type": "Jar",
+            "relative_path": "<default>",
+            "version": "test-version"
+          }
+        }
+        result = self.mgmt_client.deployments.create_or_update(resource_group_name=RESOURCE_GROUP, service_name=SERVICE_NAME, app_name=APP_NAME, deployment_name=DEPLOYMENT_NAME)
+        result = result.result()
+
+        # /Apps/put/Apps_Update[put]
+        PROPERTIES = {
+          "active_deployment_name": DEPLOYMENT_NAME,
+          "public": True,
+          
+        }
+        result = self.mgmt_client.apps.update(resource_group_name=RESOURCE_GROUP, service_name=SERVICE_NAME, app_name=APP_NAME, properties=PROPERTIES)
         result = result.result()
 
         # Not available/tested yet
@@ -136,7 +142,6 @@ class MgmtAppPlatformTest(AzureMgmtTestCase):
             "cpu": "1",
             "memory_in_gb": "3",
             "jvm_options": "-Xms1G -Xmx3G",
-            "instance_count": "1",
             "environment_variables": {
               "env": "test"
             },
@@ -286,34 +291,6 @@ class MgmtAppPlatformTest(AzureMgmtTestCase):
 
         # /Services/post/Services_ListTestKeys[post]
         result = self.mgmt_client.services.list_test_keys(resource_group_name=RESOURCE_GROUP, service_name=SERVICE_NAME)
-
-        # Not available/tested yet
-        # /Services/patch/Services_Update[patch]
-        BODY = {
-          "properties": {
-            "config_server_properties": {
-              "config_server": {
-                "git_property": {
-                  "uri": "https://github.com/fake-user/fake-repository.git",
-                  "label": "master",
-                  "search_paths": [
-                    "/"
-                  ]
-                }
-              }
-            },
-            "trace": {
-              "enabled": True,
-              "app_insight_instrumentation_key": "00000000-0000-0000-0000-000000000000"
-            }
-          },
-          "location": "eastus",
-          "tags": {
-            "key1": "value1"
-          }
-        }
-        # result = self.mgmt_client.services.update(resource_group_name=RESOURCE_GROUP, service_name=SERVICE_NAME, resource=BODY)
-        # result = result.result()
 
         # /Services/post/Services_CheckNameAvailability[post]
         result = self.mgmt_client.services.check_name_availability(azure_location=AZURE_LOCATION, type="Microsoft.AppPlatform/Spring", name="myservice")
